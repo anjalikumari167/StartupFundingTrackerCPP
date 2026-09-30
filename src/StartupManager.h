@@ -20,6 +20,9 @@ private:
     // Linear search by ID. Returns index or -1. (Replace with hashing later.)
     int findIndexById(int id) const;
 
+    // Prints every startup in the given list (used by filter and sort).
+    void printList(const std::vector<Startup>& list) const;
+
 public:
     StartupManager();
 
@@ -29,6 +32,12 @@ public:
     void searchByName() const;           // linear search, partial + case-insensitive
     void updateStartup();
     void deleteStartup();
+
+    // ---- Step 2 ----
+    void searchBySector() const;         // exact match, case-insensitive
+    void searchByStage() const;          // exact match, case-insensitive
+    void sortByFunding() const;          // shows sorted COPY, original order kept
+    void showHighestLowest() const;      // manual max / min scan
 };
 
 #endif

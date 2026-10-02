@@ -1,6 +1,7 @@
 #include "StartupManager.h"
 #include "Utils.h"
 #include <iostream>
+#include <queue>        // priority_queue (heap)
 #include <algorithm>   // std::sort
 #include <iomanip>
 #include <fstream>    // ifstream, ofstream
@@ -32,10 +33,19 @@ static string cleanField(string s) {
 StartupManager::StartupManager() : nextId(1), unsaved(false) {}
 
 int StartupManager::findIndexById(int id) const {
+    // Hash map lookup: O(1) on average (it was a linear O(n) loop before).
+    auto it = idIndex.find(id);
+    if (it == idIndex.end()) return -1;
+    return it->second;
+}
+
+void StartupManager::rebuildIndexes() {
+    idIndex.clear();
+    trie.clear();
     for (size_t i = 0; i < startups.size(); i++) {
-        if (startups[i].getId() == id) return static_cast<int>(i);
+        idIndex[startups[i].getId()] = static_cast<int>(i);
+        trie.insert(startups[i].getName());
     }
-    return -1;
 }
 
 void StartupManager::loadSampleData() {
@@ -43,6 +53,7 @@ void StartupManager::loadSampleData() {
     startups.push_back(Startup(nextId++, "Alpha Health", "HealthTech", "Seed", 12.5, "Bengaluru", "A. Sharma", "Demo Ventures"));
     startups.push_back(Startup(nextId++, "Beta Pay", "FinTech", "Series A", 85.0, "Mumbai", "R. Mehta", "Sample Capital"));
     startups.push_back(Startup(nextId++, "Gamma Learn", "EdTech", "Series B", 210.0, "Delhi", "S. Gupta", "Example Fund"));
+    rebuildIndexes();
     unsaved = true;
 }
 
@@ -57,6 +68,8 @@ void StartupManager::addStartup() {
     string investor = readNonEmpty("Investor : ");
 
     startups.push_back(Startup(nextId, name, sector, stage, funding, city, founder, investor));
+    idIndex[nextId] = static_cast<int>(startups.size()) - 1;   // keep hash map in sync
+    trie.insert(name);                                         // keep trie in sync
     cout << "Added successfully with ID " << nextId << ".\n";
     nextId++;
     unsaved = true;
@@ -117,6 +130,7 @@ void StartupManager::updateStartup() {
     v = readLine("New founder  : "); if (!v.empty()) s.setFounder(v);
     v = readLine("New investor : "); if (!v.empty()) s.setInvestor(v);
 
+    rebuildIndexes();    // the name may have changed, so refresh the trie
     unsaved = true;
     cout << "Updated successfully.\n";
 }
@@ -130,6 +144,7 @@ void StartupManager::deleteStartup() {
         return;
     }
     startups.erase(startups.begin() + idx);
+    rebuildIndexes();    // erase shifts positions, so the hash map must be rebuilt
     unsaved = true;
     cout << "Deleted.\n";
 }
@@ -299,6 +314,7 @@ bool StartupManager::loadFromFile(const string& filename) {
         }
     }
 
+    rebuildIndexes();
     unsaved = false;
     cout << "Loaded " << startups.size() << " startup(s) from " << filename << ".\n";
     if (skipped > 0) cout << "Warning: " << skipped << " bad line(s) were skipped.\n";
@@ -307,4 +323,67 @@ bool StartupManager::loadFromFile(const string& filename) {
 
 bool StartupManager::hasUnsavedChanges() const {
     return unsaved;
+}
+
+// ===================== STEP 4 =====================
+
+// 1) HASH MAP: find a startup by ID in O(1).
+void StartupManager::findById() const {
+    cout << "\n--- Find by ID ---\n";
+    int id = readInt("Enter Startup ID: ");
+    int idx = findIndexById(id);
+    if (idx == -1) {
+        cout << "No startup with that ID.\n";
+        return;
+    }
+    startups[idx].display();
+    cout << "--------------------------------------\n";
+}
+
+// 2) HEAP: top N funded startups.
+//    priority_queue is a max-heap, so the biggest funding is always on top.
+//    Push everything: O(n log n). Pop N times: O(N log n).
+void StartupManager::showTopN() const {
+    cout << "\n--- Top N Funded Startups ---\n";
+    if (startups.empty()) {
+        cout << "No startups yet.\n";
+        return;
+    }
+
+    int n = readInt("How many (N)? ");
+    if (n <= 0) {
+        cout << "N must be at least 1.\n";
+        return;
+    }
+    if (n > static_cast<int>(startups.size())) n = static_cast<int>(startups.size());
+
+    // pair = (funding, index in vector). A pair compares by funding first.
+    priority_queue<pair<double, int>> heap;
+    for (size_t i = 0; i < startups.size(); i++) {
+        heap.push({startups[i].getFundingCr(), static_cast<int>(i)});
+    }
+
+    for (int rank = 1; rank <= n; rank++) {
+        int idx = heap.top().second;    // biggest funding left
+        heap.pop();
+        cout << "#" << rank << "\n";
+        startups[idx].display();
+    }
+    cout << "--------------------------------------\n";
+}
+
+// 3) TRIE: suggest names that start with what you type.
+void StartupManager::autocompleteName() const {
+    cout << "\n--- Name Autocomplete ---\n";
+    string prefix = readNonEmpty("Type the start of a name: ");
+
+    vector<string> results = trie.autocomplete(prefix, 10);
+    if (results.empty()) {
+        cout << "No names start with \"" << prefix << "\".\n";
+        return;
+    }
+    cout << "Suggestions:\n";
+    for (size_t i = 0; i < results.size(); i++) {
+        cout << "  " << (i + 1) << ". " << results[i] << "\n";
+    }
 }

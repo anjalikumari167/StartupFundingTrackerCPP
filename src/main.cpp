@@ -21,8 +21,11 @@ void printMenu() {
     cout << " 7. Highest / Lowest Funded\n";
     cout << " 8. Update Startup\n";
     cout << " 9. Delete Startup\n";
-    cout << "10. Save Data\n";
-    cout << "11. Exit\n";
+    cout << "10. Find by ID (hash map)\n";
+    cout << "11. Top N Funded (heap)\n";
+    cout << "12. Name Autocomplete (trie)\n";
+    cout << "13. Save Data\n";
+    cout << "14. Exit\n";
 }
 
 int main() {
@@ -40,26 +43,29 @@ int main() {
         choice = readInt("Enter your choice: ");
 
         switch (choice) {
-            case 1:  manager.addStartup();        break;
-            case 2:  manager.displayAll();        break;
-            case 3:  manager.searchByName();      break;
-            case 4:  manager.searchBySector();    break;
-            case 5:  manager.searchByStage();     break;
-            case 6:  manager.sortByFunding();     break;
-            case 7:  manager.showHighestLowest(); break;
-            case 8:  manager.updateStartup();     break;
-            case 9:  manager.deleteStartup();     break;
-            case 10: manager.saveToFile(DATA_FILE); break;
-            case 11:
+            case 1:  manager.addStartup();          break;
+            case 2:  manager.displayAll();          break;
+            case 3:  manager.searchByName();        break;
+            case 4:  manager.searchBySector();      break;
+            case 5:  manager.searchByStage();       break;
+            case 6:  manager.sortByFunding();       break;
+            case 7:  manager.showHighestLowest();   break;
+            case 8:  manager.updateStartup();       break;
+            case 9:  manager.deleteStartup();       break;
+            case 10: manager.findById();            break;
+            case 11: manager.showTopN();            break;
+            case 12: manager.autocompleteName();    break;
+            case 13: manager.saveToFile(DATA_FILE); break;
+            case 14:
                 if (manager.hasUnsavedChanges()) {
                     string ans = toLower(readLine("You have unsaved changes. Save before exit? (y/n): "));
                     if (!ans.empty() && ans[0] == 'y') manager.saveToFile(DATA_FILE);
                 }
                 cout << "Goodbye!\n";
                 break;
-            default: cout << "Invalid choice. Try 1-11.\n";
+            default: cout << "Invalid choice. Try 1-14.\n";
         }
-    } while (choice != 11);
+    } while (choice != 14);
 
     return 0;
 }

@@ -18,7 +18,7 @@ C++17, STL (vector), OOP (classes, encapsulation)
 ## Roadmap
 - [x] Step 1: Classes, menu, basic CRUD
 - [x] Step 2: Sorting, filtering by sector/stage, min/max funding
-- [ ] Step 3: Save/load data using files
+- [x] Step 3: Save/load data using files
 - [ ] Step 4: Hash map lookup, heap for top-N, trie for search
 - [ ] Step 5: Reports and polish
 

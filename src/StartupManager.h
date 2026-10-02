@@ -16,6 +16,7 @@ class StartupManager {
 private:
     std::vector<Startup> startups;
     int nextId;                          // auto-increment ID
+    bool unsaved;                        // true if data changed since last save
 
     // Linear search by ID. Returns index or -1. (Replace with hashing later.)
     int findIndexById(int id) const;
@@ -38,6 +39,13 @@ public:
     void searchByStage() const;          // exact match, case-insensitive
     void sortByFunding() const;          // shows sorted COPY, original order kept
     void showHighestLowest() const;      // manual max / min scan
+
+    // ---- Step 3: file handling ----
+    // Format: one startup per line, fields separated by '|'
+    //   id|name|sector|stage|fundingCr|city|founder|investor
+    bool loadFromFile(const std::string& filename);   // false if file not found
+    bool saveToFile(const std::string& filename);     // false if it can't write
+    bool hasUnsavedChanges() const;
 };
 
 #endif

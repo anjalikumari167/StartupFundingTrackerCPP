@@ -3,10 +3,33 @@
 #include <iostream>
 #include <algorithm>   // std::sort
 #include <iomanip>
+#include <fstream>    // ifstream, ofstream
+#include <sstream>    // stringstream
 
 using namespace std;
 
-StartupManager::StartupManager() : nextId(1) {}
+// ---------- small helpers (only used in this file) ----------
+
+// Splits "a|b|c" into {"a","b","c"}.
+static vector<string> splitLine(const string& line, char delim) {
+    vector<string> parts;
+    string item;
+    stringstream ss(line);
+    while (getline(ss, item, delim)) parts.push_back(item);
+    // getline drops an empty last field, so add it back
+    if (!line.empty() && line.back() == delim) parts.push_back("");
+    return parts;
+}
+
+// '|' is our separator, so it must not appear inside a field.
+static string cleanField(string s) {
+    for (char& c : s) {
+        if (c == '|') c = '/';
+    }
+    return s;
+}
+
+StartupManager::StartupManager() : nextId(1), unsaved(false) {}
 
 int StartupManager::findIndexById(int id) const {
     for (size_t i = 0; i < startups.size(); i++) {
@@ -20,6 +43,7 @@ void StartupManager::loadSampleData() {
     startups.push_back(Startup(nextId++, "Alpha Health", "HealthTech", "Seed", 12.5, "Bengaluru", "A. Sharma", "Demo Ventures"));
     startups.push_back(Startup(nextId++, "Beta Pay", "FinTech", "Series A", 85.0, "Mumbai", "R. Mehta", "Sample Capital"));
     startups.push_back(Startup(nextId++, "Gamma Learn", "EdTech", "Series B", 210.0, "Delhi", "S. Gupta", "Example Fund"));
+    unsaved = true;
 }
 
 void StartupManager::addStartup() {
@@ -35,6 +59,7 @@ void StartupManager::addStartup() {
     startups.push_back(Startup(nextId, name, sector, stage, funding, city, founder, investor));
     cout << "Added successfully with ID " << nextId << ".\n";
     nextId++;
+    unsaved = true;
 }
 
 void StartupManager::displayAll() const {
@@ -92,6 +117,7 @@ void StartupManager::updateStartup() {
     v = readLine("New founder  : "); if (!v.empty()) s.setFounder(v);
     v = readLine("New investor : "); if (!v.empty()) s.setInvestor(v);
 
+    unsaved = true;
     cout << "Updated successfully.\n";
 }
 
@@ -104,6 +130,7 @@ void StartupManager::deleteStartup() {
         return;
     }
     startups.erase(startups.begin() + idx);
+    unsaved = true;
     cout << "Deleted.\n";
 }
 
@@ -211,4 +238,73 @@ void StartupManager::showHighestLowest() const {
     cout << "\nLOWEST FUNDED:\n";
     startups[minIdx].display();
     cout << "--------------------------------------\n";
+}
+
+// ===================== STEP 3 =====================
+
+bool StartupManager::saveToFile(const string& filename) {
+    ofstream out(filename);              // creates the file / overwrites it
+    if (!out) {
+        cout << "Could not open " << filename << " for writing.\n";
+        return false;
+    }
+
+    out << fixed << setprecision(2);     // funding always saved as 85.00
+    for (const Startup& s : startups) {
+        out << s.getId() << '|'
+            << cleanField(s.getName()) << '|'
+            << cleanField(s.getSector()) << '|'
+            << cleanField(s.getStage()) << '|'
+            << s.getFundingCr() << '|'
+            << cleanField(s.getCity()) << '|'
+            << cleanField(s.getFounder()) << '|'
+            << cleanField(s.getInvestor()) << '\n';
+    }
+
+    if (!out) {
+        cout << "Error while writing to " << filename << ".\n";
+        return false;
+    }
+    unsaved = false;
+    cout << "Saved " << startups.size() << " startup(s) to " << filename << ".\n";
+    return true;
+}
+
+bool StartupManager::loadFromFile(const string& filename) {
+    ifstream in(filename);
+    if (!in) return false;               // file not found (e.g. first run)
+
+    startups.clear();
+    nextId = 1;
+
+    string line;
+    int skipped = 0;
+    while (getline(in, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();  // Windows line ending
+        if (line.empty()) continue;
+
+        vector<string> f = splitLine(line, '|');
+        if (f.size() != 8) {             // wrong number of fields -> bad line
+            skipped++;
+            continue;
+        }
+
+        try {
+            int id = stoi(f[0]);
+            double funding = stod(f[4]);
+            startups.push_back(Startup(id, f[1], f[2], f[3], funding, f[5], f[6], f[7]));
+            if (id >= nextId) nextId = id + 1;   // keep IDs unique after loading
+        } catch (...) {
+            skipped++;                   // id or funding was not a number
+        }
+    }
+
+    unsaved = false;
+    cout << "Loaded " << startups.size() << " startup(s) from " << filename << ".\n";
+    if (skipped > 0) cout << "Warning: " << skipped << " bad line(s) were skipped.\n";
+    return true;
+}
+
+bool StartupManager::hasUnsavedChanges() const {
+    return unsaved;
 }

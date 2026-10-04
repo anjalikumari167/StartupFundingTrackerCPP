@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <ostream>
 #include <unordered_map>
 #include "Startup.h"
 #include "Trie.h"
@@ -33,6 +34,9 @@ private:
     // Prints every startup in the given list (used by filter and sort).
     void printList(const std::vector<Startup>& list) const;
 
+    // Writes the report to ANY output stream (screen or file).
+    void writeReport(std::ostream& os) const;
+
 public:
     StartupManager();
 
@@ -59,6 +63,9 @@ public:
     void findById() const;               // hash map lookup
     void showTopN() const;               // heap
     void autocompleteName() const;       // trie
+
+    // ---- Step 5: reports ----
+    void showReport() const;             // summary + totals per sector / stage
 };
 
 #endif

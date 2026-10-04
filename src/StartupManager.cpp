@@ -2,6 +2,7 @@
 #include "Utils.h"
 #include <iostream>
 #include <queue>        // priority_queue (heap)
+#include <map>
 #include <algorithm>   // std::sort
 #include <iomanip>
 #include <fstream>    // ifstream, ofstream
@@ -143,6 +144,13 @@ void StartupManager::deleteStartup() {
         cout << "No startup with that ID.\n";
         return;
     }
+    startups[idx].display();
+    string ans = toLower(readLine("Delete this startup? (y/n): "));
+    if (ans.empty() || ans[0] != 'y') {
+        cout << "Cancelled. Nothing was deleted.\n";
+        return;
+    }
+
     startups.erase(startups.begin() + idx);
     rebuildIndexes();    // erase shifts positions, so the hash map must be rebuilt
     unsaved = true;
@@ -385,5 +393,96 @@ void StartupManager::autocompleteName() const {
     cout << "Suggestions:\n";
     for (size_t i = 0; i < results.size(); i++) {
         cout << "  " << (i + 1) << ". " << results[i] << "\n";
+    }
+}
+
+// ===================== STEP 5 =====================
+
+namespace {
+
+// One row of a report: how many startups and how much money in a group.
+struct Group {
+    string label;       // shown to the user (original capitalisation)
+    int count = 0;
+    double total = 0.0;
+};
+
+void printGroupTable(ostream& os, const string& title,
+                     const map<string, Group>& groups, double grandTotal) {
+    os << "\n" << title << "\n";
+    os << left << setw(18) << "Name"
+       << right << setw(9) << "Startups"
+       << setw(14) << "Total (Cr)"
+       << setw(8) << "Share" << "\n";
+    os << string(49, '-') << "\n";
+
+    // std::map keeps the keys sorted, so rows come out alphabetically.
+    for (const auto& entry : groups) {
+        const Group& g = entry.second;
+        double share = (grandTotal > 0) ? g.total * 100.0 / grandTotal : 0.0;
+        os << left << setw(18) << g.label.substr(0, 17)
+           << right << setw(9) << g.count
+           << setw(14) << g.total
+           << setw(7) << share << "%\n";
+    }
+}
+
+}  // end of anonymous namespace (helpers above are private to this file)
+
+// Writes the whole report to any stream: cout for the screen, ofstream for a file.
+void StartupManager::writeReport(ostream& os) const {
+    os << "\n======== FUNDING REPORT ========\n";
+    if (startups.empty()) {
+        os << "No startups yet.\n";
+        return;
+    }
+
+    double total = 0.0;
+    size_t maxIdx = 0, minIdx = 0;
+    map<string, Group> bySector, byStage;   // key = lowercase, so "fintech" and "FinTech" merge
+
+    for (size_t i = 0; i < startups.size(); i++) {
+        const Startup& s = startups[i];
+        total += s.getFundingCr();
+        if (s.getFundingCr() > startups[maxIdx].getFundingCr()) maxIdx = i;
+        if (s.getFundingCr() < startups[minIdx].getFundingCr()) minIdx = i;
+
+        Group& sec = bySector[toLower(s.getSector())];
+        if (sec.count == 0) sec.label = s.getSector();
+        sec.count++;
+        sec.total += s.getFundingCr();
+
+        Group& stg = byStage[toLower(s.getStage())];
+        if (stg.count == 0) stg.label = s.getStage();
+        stg.count++;
+        stg.total += s.getFundingCr();
+    }
+
+    os << fixed << setprecision(2);
+    os << "Total startups  : " << startups.size() << "\n";
+    os << "Total funding   : Rs " << total << " Cr\n";
+    os << "Average funding : Rs " << total / startups.size() << " Cr\n";
+    os << "Highest funded  : " << startups[maxIdx].getName()
+       << " (Rs " << startups[maxIdx].getFundingCr() << " Cr)\n";
+    os << "Lowest funded   : " << startups[minIdx].getName()
+       << " (Rs " << startups[minIdx].getFundingCr() << " Cr)\n";
+
+    printGroupTable(os, "BY SECTOR", bySector, total);
+    printGroupTable(os, "BY FUNDING STAGE", byStage, total);
+}
+
+void StartupManager::showReport() const {
+    writeReport(cout);
+    if (startups.empty()) return;
+
+    string ans = toLower(readLine("\nSave this report to report.txt? (y/n): "));
+    if (!ans.empty() && ans[0] == 'y') {
+        ofstream out("report.txt");
+        if (!out) {
+            cout << "Could not create report.txt.\n";
+            return;
+        }
+        writeReport(out);
+        cout << "Report saved to report.txt.\n";
     }
 }

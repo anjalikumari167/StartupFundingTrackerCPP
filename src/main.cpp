@@ -24,8 +24,9 @@ void printMenu() {
     cout << "10. Find by ID (hash map)\n";
     cout << "11. Top N Funded (heap)\n";
     cout << "12. Name Autocomplete (trie)\n";
-    cout << "13. Save Data\n";
-    cout << "14. Exit\n";
+    cout << "13. Funding Report\n";
+    cout << "14. Save Data\n";
+    cout << "15. Exit\n";
 }
 
 int main() {
@@ -55,17 +56,18 @@ int main() {
             case 10: manager.findById();            break;
             case 11: manager.showTopN();            break;
             case 12: manager.autocompleteName();    break;
-            case 13: manager.saveToFile(DATA_FILE); break;
-            case 14:
+            case 13: manager.showReport();          break;
+            case 14: manager.saveToFile(DATA_FILE); break;
+            case 15:
                 if (manager.hasUnsavedChanges()) {
                     string ans = toLower(readLine("You have unsaved changes. Save before exit? (y/n): "));
                     if (!ans.empty() && ans[0] == 'y') manager.saveToFile(DATA_FILE);
                 }
                 cout << "Goodbye!\n";
                 break;
-            default: cout << "Invalid choice. Try 1-14.\n";
+            default: cout << "Invalid choice. Try 1-15.\n";
         }
-    } while (choice != 14);
+    } while (choice != 15);
 
     return 0;
 }

@@ -9,6 +9,15 @@
 #include <cstdlib>
 #include <cctype>
 
+// Removes spaces/tabs at the start and end of a string.
+inline std::string trim(const std::string& s) {
+    size_t start = 0;
+    while (start < s.size() && std::isspace(static_cast<unsigned char>(s[start]))) start++;
+    size_t end = s.size();
+    while (end > start && std::isspace(static_cast<unsigned char>(s[end - 1]))) end--;
+    return s.substr(start, end - start);
+}
+
 inline std::string readLine(const std::string& prompt) {
     std::cout << prompt;
     std::string s;
@@ -16,7 +25,7 @@ inline std::string readLine(const std::string& prompt) {
         std::cout << "\nInput ended. Exiting.\n";
         std::exit(0);
     }
-    return s;
+    return trim(s);          // "  Pune  " becomes "Pune"
 }
 
 // Keeps asking until the user types something non-empty.
